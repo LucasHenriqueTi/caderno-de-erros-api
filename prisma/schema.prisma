@@ -1,0 +1,99 @@
+// Modelo de dados da sincronização (etapa 4).
+// O APP é "local primeiro": os ids nascem no aparelho (UUID) e a API guarda uma cópia por usuário.
+// Conflitos: vale a alteração mais recente de cada registro (campo atualizadoEm).
+// Exclusões viram "lápide" (excluidoEm) para que os outros aparelhos também apaguem.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Prioridade {
+  alta
+  media
+  superado
+}
+
+enum Origem {
+  desconhecimento
+  confusao
+  esquecimento
+  interpretacao
+  nao_classificado
+}
+
+model Usuario {
+  id       String    @id @default(uuid())
+  email    String    @unique
+  criadoEm DateTime  @default(now())
+  materias Materia[]
+  topicos  Topico[]
+  erros    Erro[]
+}
+
+model Materia {
+  usuarioId    String
+  id           String
+  nome         String
+  criadoEm     DateTime
+  atualizadoEm DateTime
+  excluidoEm   DateTime?
+  /// Momento em que o servidor recebeu a última versão (cursor do "desde").
+  recebidoEm   DateTime  @default(now()) @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, id])
+  @@index([usuarioId, recebidoEm])
+}
+
+model Topico {
+  usuarioId    String
+  id           String
+  materiaId    String
+  nome         String
+  criadoEm     DateTime
+  atualizadoEm DateTime
+  excluidoEm   DateTime?
+  recebidoEm   DateTime  @default(now()) @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, id])
+  @@index([usuarioId, recebidoEm])
+}
+
+model Erro {
+  usuarioId    String
+  id           String
+  materiaId    String
+  topicoId     String
+  descricao    String
+  correcao     String
+  origem       Origem
+  prioridade   Prioridade
+  comoEvitar   String     @default("")
+  banca        String     @default("")
+  referencia   String     @default("")
+  /// Data do registro (AAAA-MM-DD), como no APP.
+  dataRegistro String
+  /// Lista de { data, campo, de, para }.
+  historico    Json
+  /// { proxima, etapa, ultima, acertosSeguidos }.
+  revisao      Json
+  criadoEm     DateTime
+  atualizadoEm DateTime
+  excluidoEm   DateTime?
+  recebidoEm   DateTime   @default(now()) @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, id])
+  @@index([usuarioId, recebidoEm])
+}

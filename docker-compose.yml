@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: caderno
+      POSTGRES_PASSWORD: caderno
+      POSTGRES_DB: caderno_erros
+    ports:
+      - "5432:5432"
+    volumes:
+      - dados:/var/lib/postgresql/data
+
+volumes:
+  dados:
